@@ -2,11 +2,14 @@
 import '../styles/globals.css';
 import type { AppProps /*, AppContext */ } from 'next/app';
 import { ChakraProvider } from '@chakra-ui/react';
+import { AuthUserProvider } from '@/contexts/auth_user.context';
 
 const MyApp = function ({ Component, pageProps }: AppProps) {
   return (
     <ChakraProvider>
-      <Component {...pageProps} />;
+      <AuthUserProvider>
+        <Component {...pageProps} />;
+      </AuthUserProvider>
     </ChakraProvider>
   );
 };
