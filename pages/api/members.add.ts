@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import MemberControl from '@/controllers/member.control';
+import handleError from '@/controllers/error/handle.error';
+import checkSupportMethod from '@/controllers/error/check_support_method';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req;
@@ -10,13 +12,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    if (supportMethod.indexOf(method) === -1) {
-      // 에러 발생
-    }
-
+    checkSupportMethod(supportMethod, method);
     await MemberControl.add(req, res);
   } catch (e) {
     console.error(e);
-    // 에러 처리
+    handleError(e, res);
   }
 }
