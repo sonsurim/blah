@@ -1,8 +1,9 @@
-import { Avatar, Box, Button, Flex, Text, Textarea, useToast } from '@chakra-ui/react';
+import { Avatar, Box, Button, Flex, FormControl, FormLabel, Switch, Text, Textarea, useToast } from '@chakra-ui/react';
 import { NextPage } from 'next';
 import React, { ChangeEventHandler, useState } from 'react';
 import ResizeTextArea from 'react-textarea-autosize';
 import { ServiceLayout } from '@/components/service_layout';
+import { useAuth } from '@/contexts/auth_user.context';
 
 const userInfo = {
   uid: 'test',
@@ -13,9 +14,11 @@ const userInfo = {
 
 const UserHomePage: NextPage = function () {
   const [message, setMessage] = useState('');
+  const [isAnonymous, setAnonymous] = useState(true);
   const toast = useToast();
+  const { authUser } = useAuth();
 
-  const handleChange: ChangeEventHandler<HTMLTextAreaElement> = (e) => {
+  const handleTextArea: ChangeEventHandler<HTMLTextAreaElement> = (e) => {
     const lineCount = e.currentTarget.value.match(/[^\n]*\n[^\n]*/gi)?.length ?? 1;
 
     if (lineCount + 1 > 7) {
@@ -28,6 +31,14 @@ const UserHomePage: NextPage = function () {
     }
 
     setMessage(e.currentTarget.value);
+  };
+
+  const handleSwitch = () => {
+    if (!authUser) {
+      toast({ title: '로그인이 필요합니다!', position: 'top-right' });
+      return;
+    }
+    setAnonymous((prev) => !prev);
   };
 
   return (
@@ -44,7 +55,11 @@ const UserHomePage: NextPage = function () {
         </Box>
         <Box borderWidth="1px" borderRadius="lg" overflow="hidden" mb="2" bg="white">
           <Flex align="center" p="2">
-            <Avatar size="xs" src="https://bit.ly/broken-link" mr="2" />
+            <Avatar
+              size="xs"
+              src={isAnonymous ? 'https://bit.ly/broken-link' : authUser?.photoURL ?? 'https://bit.ly/broken-link'}
+              mr="2"
+            />
             <Textarea
               bg="gray.100"
               border="none"
@@ -57,12 +72,25 @@ const UserHomePage: NextPage = function () {
               maxRows={7}
               as={ResizeTextArea}
               value={message}
-              onChange={(e) => handleChange(e)}
+              onChange={(e) => handleTextArea(e)}
             />
             <Button disabled={!message} bgColor="#FFBB86C" color="white" colorScheme="yellow" variant="solid" size="sm">
               등록
             </Button>
           </Flex>
+          <FormControl display="flex" alignItems="center" mt="1" mx="2" pb="2">
+            <Switch
+              size="sm"
+              colorScheme="orange"
+              id="anonymous"
+              mr="1"
+              isChecked={isAnonymous}
+              onChange={handleSwitch}
+            />
+            <FormLabel htmlFor="anonymous" mb="0" fontSize="xx-small">
+              Anonymous
+            </FormLabel>
+          </FormControl>
         </Box>
       </Box>
     </ServiceLayout>
