@@ -1,4 +1,5 @@
-import { Avatar, Box, Divider, Flex, Text } from '@chakra-ui/react';
+import { Avatar, Box, Button, Divider, Flex, Text, Textarea } from '@chakra-ui/react';
+import ResizeTextarea from 'react-textarea-autosize';
 import { InMessage } from '@/models/message/in_message';
 import convertDateToString from '@/utils/convert_date_to_string';
 
@@ -10,7 +11,7 @@ interface Props {
   item: InMessage;
 }
 
-const MessageItem = function ({ displayName, photoURL, item }: Props) {
+const MessageItem = function ({ displayName, photoURL, isOwner, item }: Props) {
   const haveReply = item.reply !== undefined;
 
   return (
@@ -53,6 +54,31 @@ const MessageItem = function ({ displayName, photoURL, item }: Props) {
                   {item.reply}
                 </Text>
               </Box>
+            </Box>
+          </Box>
+        )}
+        {!haveReply && isOwner && (
+          <Box pt="2">
+            <Divider />
+            <Box display="flex" mt="2">
+              <Box pt="1">
+                <Avatar size="xs" src={photoURL} mr="2" />
+              </Box>
+              <Box borderRadius="md" width="full" bg="gray.100" mr="2">
+                <Textarea
+                  border="none"
+                  boxShadow="none !important"
+                  resize="none"
+                  minH="unset"
+                  overflow="hidden"
+                  fontSize="xs"
+                  placeholder="댓글을 입력하세요..."
+                  as={ResizeTextarea}
+                />
+              </Box>
+              <Button colorScheme="pink" bgColor="#FF75B5" variant="solid" size="sm">
+                등록
+              </Button>
             </Box>
           </Box>
         )}

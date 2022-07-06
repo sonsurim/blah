@@ -187,7 +187,17 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
               replyAt: '2022-05-15T20:15:55+09:00',
             }}
           />
-          {/* <MessageItem /> */}
+          <MessageItem
+            uid="asd2"
+            photoURL={authUser?.photoURL ?? ''}
+            displayName="test"
+            isOwner
+            item={{
+              id: 'test2',
+              message: '테스트용22',
+              createAt: '2022-04-15T20:15:55+09:00',
+            }}
+          />
         </VStack>
       </Box>
     </ServiceLayout>
