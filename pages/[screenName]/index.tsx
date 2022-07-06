@@ -11,6 +11,39 @@ interface Props {
   userInfo: InAuthUser | null;
 }
 
+interface Author {
+  displayName: string;
+  photoURL?: string;
+}
+
+interface postRequest {
+  uid: string;
+  message: string;
+  author?: Author;
+}
+
+async function postMessage({ uid, message, author }: postRequest) {
+  if (message.length <= 0) {
+    return {
+      result: false,
+      message: '메시지를 입력해주세요!',
+    };
+  }
+
+  try {
+    await axios.post('/api/messages.add/', { uid, message, author });
+    return {
+      result: true,
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      result: false,
+      message: '메시지 등록 실패',
+    };
+  }
+}
+
 const UserHomePage: NextPage<Props> = function ({ userInfo }) {
   const [message, setMessage] = useState('');
   const [isAnonymous, setAnonymous] = useState(true);
@@ -44,9 +77,32 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     return <p>사용자를 찾을 수 없습니다!</p>;
   }
 
+  const handleSubmit = async () => {
+    const { uid } = userInfo;
+    const postData: postRequest = {
+      uid,
+      message,
+    };
+
+    if (!isAnonymous) {
+      postData.author = {
+        photoURL: authUser?.photoURL ?? 'https://bit.ly/broken-link',
+        displayName: authUser?.displayName ?? 'anonymous',
+      };
+    }
+
+    const messageResponse = await postMessage(postData);
+
+    if (!messageResponse.result) {
+      toast({ title: '메시지 등록 실패', position: 'top-right' });
+    }
+
+    setMessage('');
+  };
+
   return (
     // <ServiceLayout title="user home" minH="100vh" backgroundColor="gray.50">
-    <ServiceLayout title="user home">
+    <ServiceLayout title={`${userInfo.displayName}의 Home`}>
       <Box maxW="md" mx="auto" pt="6">
         <Box borderWidth="1px" borderRadius="lg" overflow="hidden" mb="2" bg="white">
           <Flex p="6">
@@ -78,7 +134,15 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
               value={message}
               onChange={(e) => handleTextArea(e)}
             />
-            <Button disabled={!message} bgColor="#FFBB86C" color="white" colorScheme="yellow" variant="solid" size="sm">
+            <Button
+              disabled={!message}
+              bgColor="#FFBB86C"
+              color="white"
+              colorScheme="yellow"
+              variant="solid"
+              size="sm"
+              onClick={handleSubmit}
+            >
               등록
             </Button>
           </Flex>
