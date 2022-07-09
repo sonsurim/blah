@@ -15,7 +15,7 @@ export interface InMessage extends MessageBase {
   replyAt?: string;
 }
 
-export interface InMessageServer {
+export interface InMessageServer extends MessageBase {
   createAt: firestore.Timestamp;
   replyAt?: firestore.Timestamp;
 }

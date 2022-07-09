@@ -30,9 +30,29 @@ async function list(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json(listResponse);
 }
 
+async function postReply(req: NextApiRequest, res: NextApiResponse) {
+  const { uid, messageId, reply } = req.body;
+
+  if (!uid) {
+    throw new BadRequestError('uid가 누락되었습니다!');
+  }
+
+  if (!messageId) {
+    throw new BadRequestError('message Id가 누락되었습니다!');
+  }
+
+  if (!reply) {
+    throw new BadRequestError('Reply가 누락되었습니다!');
+  }
+
+  await MessageModel.postReply({ uid, messageId, reply });
+  return res.status(201).end();
+}
+
 const MessageControl = {
   post,
   list,
+  postReply,
 };
 
 export default MessageControl;
