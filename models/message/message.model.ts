@@ -2,6 +2,7 @@ import { firestore } from 'firebase-admin';
 import CustomServerError from '@/controllers/error/custom_server_error';
 import FirebaseAdmin from '../firebase_admin';
 import { InMessage, InMessageServer } from './in_message';
+import { InAuthUser } from '../in_auth_user';
 
 const MEMBER_COLLECTION = 'members';
 const MESSAGE_COLLECTION = 'messages';
@@ -22,6 +23,7 @@ interface postRequest {
 interface MessageBody {
   message: string;
   createAt: firestore.FieldValue;
+  messageNo: number;
   author?: Author;
 }
 
@@ -39,15 +41,22 @@ interface PostReply {
 async function post({ uid, message, author }: postRequest) {
   const memberRef = FireStore.collection(MEMBER_COLLECTION).doc(uid);
   await FireStore.runTransaction(async (transaction) => {
+    let messageCount = 1;
     const memberDoc = await transaction.get(memberRef);
 
     if (!memberDoc.exists) {
       throw new CustomServerError({ statusCode: 400, message: '존재하지 않는 사용자 입니다!' });
     }
 
+    const memberInfo = memberDoc.data() as InAuthUser & { messageCount?: number };
+    if (memberInfo.messageCount !== undefined) {
+      messageCount = memberInfo.messageCount;
+    }
+
     const newMessageRef = memberRef.collection(MESSAGE_COLLECTION).doc();
     const newMessageBody: MessageBody = {
       message,
+      messageNo: messageCount,
       createAt: firestore.FieldValue.serverTimestamp(),
     };
 
@@ -56,6 +65,7 @@ async function post({ uid, message, author }: postRequest) {
     }
 
     await transaction.set(newMessageRef, newMessageBody);
+    await transaction.update(memberRef, { messageCount: messageCount + 1 });
   });
 }
 
@@ -83,6 +93,62 @@ async function list({ uid }: { uid: string }) {
     });
 
     return data;
+  });
+
+  return listData;
+}
+
+async function listWithPage({ uid, page = 1, size = 10 }: { uid: string; page?: number; size?: number }) {
+  const memberRef = FireStore.collection(MEMBER_COLLECTION).doc(uid);
+  const listData = await FireStore.runTransaction(async (transaction) => {
+    const memberDoc = await transaction.get(memberRef);
+
+    if (!memberDoc.exists) {
+      throw new CustomServerError({ statusCode: 400, message: '존재하지 않는 사용자 입니다!' });
+    }
+
+    const memberInfo = memberDoc.data() as InAuthUser & { messageCount?: number };
+    const { messageCount = 0 } = memberInfo;
+    const totalElements = messageCount !== 0 ? messageCount - 1 : 0;
+    const remains = totalElements % size;
+    const totalPages = (totalElements - remains) / size + (remains > 0 ? 1 : 0);
+    const startAt = totalElements - (page - 1) * size;
+
+    if (startAt < 0) {
+      return {
+        totalElements,
+        totalPages: 0,
+        page,
+        size,
+        content: [],
+      };
+    }
+
+    const messageCollection = memberRef
+      .collection(MESSAGE_COLLECTION)
+      .orderBy('messageNo', 'desc')
+      .startAt(startAt)
+      .limit(size);
+    const messageCollectionDoc = await transaction.get(messageCollection);
+    const data = messageCollectionDoc.docs.map((mapValue) => {
+      const docData = mapValue.data() as Omit<InMessageServer, 'id'>;
+      const returnData = {
+        ...docData,
+        id: mapValue.id,
+        createAt: docData.createAt.toDate().toISOString(),
+        replyAt: docData.replyAt ? docData.replyAt.toDate().toISOString() : undefined,
+      } as InMessage;
+
+      return returnData;
+    });
+
+    return {
+      totalElements,
+      totalPages,
+      page,
+      size,
+      content: data,
+    };
   });
 
   return listData;
@@ -143,6 +209,7 @@ async function postReply({ uid, messageId, reply }: PostReply) {
 const MessageModel = {
   post,
   list,
+  listWithPage,
   get,
   postReply,
 };

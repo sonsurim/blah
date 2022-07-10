@@ -11,6 +11,7 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react';
+import { TriangleDownIcon } from '@chakra-ui/icons';
 import { GetServerSideProps, NextPage } from 'next';
 import React, { ChangeEventHandler, useEffect, useState } from 'react';
 import ResizeTextArea from 'react-textarea-autosize';
@@ -34,6 +35,14 @@ interface postRequest {
   uid: string;
   message: string;
   author?: Author;
+}
+
+interface MessageData {
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+  content: InMessage[];
 }
 
 async function postMessage({ uid, message, author }: postRequest) {
@@ -61,6 +70,8 @@ async function postMessage({ uid, message, author }: postRequest) {
 const UserHomePage: NextPage<Props> = function ({ userInfo }) {
   const [message, setMessage] = useState('');
   const [isAnonymous, setAnonymous] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [messageList, setMessageList] = useState<InMessage[]>([]);
   const [messageListFetchTrigger, setMessageListFetchTrigger] = useState(false);
   const toast = useToast();
@@ -91,9 +102,11 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
 
   const fetchMessageList = async (uid: string) => {
     try {
-      const response = await axios.get(`/api/messages.list?uid=${uid}`);
-      const { data } = response;
-      setMessageList(data);
+      const response = await axios.get(`/api/messages.list?uid=${uid}&page=${page}&size=10`);
+      const { data }: { data: MessageData } = response;
+
+      setTotalPages(data.totalPages);
+      setMessageList((prev) => [...prev, ...data.content]);
     } catch (e) {
       console.error(e);
     }
@@ -128,7 +141,7 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     }
 
     fetchMessageList(userInfo.uid);
-  }, [userInfo, messageListFetchTrigger]);
+  }, [userInfo, messageListFetchTrigger, page]);
 
   if (!userInfo) {
     return <p>사용자를 찾을 수 없습니다!</p>;
@@ -237,6 +250,19 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
             />
           ))}
         </VStack>
+        {totalPages > page && (
+          <Button
+            width="full"
+            mt="2"
+            fontSize="sm"
+            leftIcon={<TriangleDownIcon />}
+            onClick={() => {
+              setPage((prevPage) => prevPage + 1);
+            }}
+          >
+            더보기
+          </Button>
+        )}
       </Box>
     </ServiceLayout>
   );
