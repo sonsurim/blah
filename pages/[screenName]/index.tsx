@@ -16,6 +16,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import React, { ChangeEventHandler, useEffect, useState } from 'react';
 import ResizeTextArea from 'react-textarea-autosize';
 import axios, { AxiosResponse } from 'axios';
+import { useQuery } from 'react-query';
 import { ServiceLayout } from '@/components/service_layout';
 import { useAuth } from '@/contexts/auth_user.context';
 import { InAuthUser } from '@/models/in_auth_user';
@@ -100,18 +101,6 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     setAnonymous((prev) => !prev);
   };
 
-  const fetchMessageList = async (uid: string) => {
-    try {
-      const response = await axios.get(`/api/messages.list?uid=${uid}&page=${page}&size=10`);
-      const { data }: { data: MessageData } = response;
-
-      setTotalPages(data.totalPages);
-      setMessageList((prev) => [...prev, ...data.content]);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   type FetchMessageInfo = ({ uid, messageId }: { uid: string; messageId: string }) => any;
 
   const fetchMessageInfo: FetchMessageInfo = async ({ uid, messageId }) => {
@@ -135,13 +124,25 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     }
   };
 
-  useEffect(() => {
-    if (!userInfo) {
-      return;
-    }
+  const messageListQueryKeys = ['messageList', userInfo?.uid, page, messageListFetchTrigger];
+  useQuery(
+    messageListQueryKeys,
+    async () => axios.get<MessageData>(`/api/messages.list?uid=${userInfo?.uid}&page=${page}&size=10`),
+    {
+      keepPreviousData: true,
+      refetchOnWindowFocus: false,
+      onSuccess: (data) => {
+        setTotalPages(data.data.totalPages);
 
-    fetchMessageList(userInfo.uid);
-  }, [userInfo, messageListFetchTrigger, page]);
+        if (page === 1) {
+          setMessageList([...data.data.content]);
+          return;
+        }
+
+        setMessageList((prev) => [...prev, ...data.data.content]);
+      },
+    },
+  );
 
   if (!userInfo) {
     return <p>사용자를 찾을 수 없습니다!</p>;
@@ -174,7 +175,11 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     }
 
     setMessage('');
-    setMessageListFetchTrigger((prev) => !prev);
+    setPage(1);
+
+    setTimeout(() => {
+      setMessageListFetchTrigger((prev) => !prev);
+    }, 50);
   };
 
   return (
