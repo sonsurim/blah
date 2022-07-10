@@ -1,5 +1,7 @@
 import { Avatar, Box, Button, Divider, Flex, Text, Textarea } from '@chakra-ui/react';
 import ResizeTextarea from 'react-textarea-autosize';
+import { ChangeEventHandler, MouseEventHandler, useState } from 'react';
+import axios from 'axios';
 import { InMessage } from '@/models/message/in_message';
 import convertDateToString from '@/utils/convert_date_to_string';
 
@@ -9,10 +11,26 @@ interface Props {
   photoURL: string;
   isOwner: boolean;
   item: InMessage;
+  onSendComplete: () => void;
 }
 
-const MessageItem = function ({ displayName, photoURL, isOwner, item }: Props) {
+const MessageItem = function ({ uid, displayName, photoURL, isOwner, item, onSendComplete }: Props) {
+  const [reply, setReply] = useState('');
   const haveReply = item.reply !== undefined;
+
+  const handleChangeReply: ChangeEventHandler<HTMLTextAreaElement> = (e) => {
+    setReply(e.currentTarget.value);
+  };
+
+  const handleSubmitReply: MouseEventHandler<HTMLButtonElement> = async () => {
+    const response = await axios.post('/api/messages.add.reply', { uid, messageId: item.id, reply });
+
+    if (response.status < 300) {
+      onSendComplete();
+    }
+
+    console.log(response);
+  };
 
   return (
     <Box borderRadius="md" width="full" bg="white" boxShadow="md">
@@ -74,9 +92,18 @@ const MessageItem = function ({ displayName, photoURL, isOwner, item }: Props) {
                   fontSize="xs"
                   placeholder="댓글을 입력하세요..."
                   as={ResizeTextarea}
+                  value={reply}
+                  onChange={handleChangeReply}
                 />
               </Box>
-              <Button colorScheme="pink" bgColor="#FF75B5" variant="solid" size="sm">
+              <Button
+                disabled={!reply.length}
+                colorScheme="pink"
+                bgColor="#FF75B5"
+                variant="solid"
+                size="sm"
+                onClick={handleSubmitReply}
+              >
                 등록
               </Button>
             </Box>

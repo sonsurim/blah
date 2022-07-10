@@ -62,6 +62,7 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
   const [message, setMessage] = useState('');
   const [isAnonymous, setAnonymous] = useState(true);
   const [messageList, setMessageList] = useState<InMessage[]>([]);
+  const [messageListFetchTrigger, setMessageListFetchTrigger] = useState(false);
   const toast = useToast();
   const { authUser } = useAuth();
 
@@ -88,6 +89,10 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     setAnonymous((prev) => !prev);
   };
 
+  const handleOnSendComplete = () => {
+    setMessageListFetchTrigger((prev) => !prev);
+  };
+
   const getMessageList = async (uid: string) => {
     try {
       const response = await axios.get(`/api/messages.list?uid=${uid}`);
@@ -104,7 +109,7 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     }
 
     getMessageList(userInfo.uid);
-  }, [userInfo]);
+  }, [userInfo, messageListFetchTrigger]);
 
   if (!userInfo) {
     return <p>사용자를 찾을 수 없습니다!</p>;
@@ -202,6 +207,7 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
               displayName={userInfo.displayName ?? ''}
               photoURL={userInfo.photoURL ?? 'https://bit.ly/broken-link'}
               isOwner={authUser !== null && authUser.uid === userInfo.uid}
+              onSendComplete={handleOnSendComplete}
             />
           ))}
         </VStack>
