@@ -30,6 +30,23 @@ async function list(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json(listResponse);
 }
 
+async function get(req: NextApiRequest, res: NextApiResponse) {
+  const { uid, messageId } = req.query;
+
+  if (!uid) {
+    throw new BadRequestError('uid가 누락되었습니다!');
+  }
+
+  if (!messageId) {
+    throw new BadRequestError('message Id가 누락되었습니다!');
+  }
+
+  const uidToString = Array.isArray(uid) ? uid[0] : uid;
+  const messageIdToString = Array.isArray(messageId) ? messageId[0] : messageId;
+  const data = await MessageModel.get({ uid: uidToString, messageId: messageIdToString });
+  return res.status(200).json(data);
+}
+
 async function postReply(req: NextApiRequest, res: NextApiResponse) {
   const { uid, messageId, reply } = req.body;
 
@@ -52,6 +69,7 @@ async function postReply(req: NextApiRequest, res: NextApiResponse) {
 const MessageControl = {
   post,
   list,
+  get,
   postReply,
 };
 

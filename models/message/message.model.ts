@@ -25,6 +25,11 @@ interface MessageBody {
   author?: Author;
 }
 
+interface Get {
+  uid: string;
+  messageId: string;
+}
+
 interface PostReply {
   uid: string;
   messageId: string;
@@ -83,6 +88,33 @@ async function list({ uid }: { uid: string }) {
   return listData;
 }
 
+async function get({ uid, messageId }: Get) {
+  const memberRef = FireStore.collection(MEMBER_COLLECTION).doc(uid);
+  const messageRef = FireStore.collection(MEMBER_COLLECTION).doc(uid).collection(MESSAGE_COLLECTION).doc(messageId);
+  const data = await FireStore.runTransaction(async (transaction) => {
+    const memberDoc = await transaction.get(memberRef);
+    const messageDoc = await transaction.get(messageRef);
+
+    if (!memberDoc.exists) {
+      throw new CustomServerError({ statusCode: 400, message: '존재하지 않는 사용자입니다!' });
+    }
+
+    if (!messageDoc.exists) {
+      throw new CustomServerError({ statusCode: 400, message: '존재하지 않는 문서입니다!' });
+    }
+
+    const messageData = messageDoc.data() as InMessageServer;
+    return {
+      ...messageData,
+      id: messageId,
+      createAt: messageData.createAt.toDate().toISOString(),
+      replyAt: messageData.replyAt ? messageData.replyAt.toDate().toISOString() : undefined,
+    };
+  });
+
+  return data;
+}
+
 async function postReply({ uid, messageId, reply }: PostReply) {
   const memberRef = FireStore.collection(MEMBER_COLLECTION).doc(uid);
   const messageRef = FireStore.collection(MEMBER_COLLECTION).doc(uid).collection(MESSAGE_COLLECTION).doc(messageId);
@@ -111,6 +143,7 @@ async function postReply({ uid, messageId, reply }: PostReply) {
 const MessageModel = {
   post,
   list,
+  get,
   postReply,
 };
 

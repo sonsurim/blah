@@ -89,15 +89,34 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     setAnonymous((prev) => !prev);
   };
 
-  const handleOnSendComplete = () => {
-    setMessageListFetchTrigger((prev) => !prev);
-  };
-
-  const getMessageList = async (uid: string) => {
+  const fetchMessageList = async (uid: string) => {
     try {
       const response = await axios.get(`/api/messages.list?uid=${uid}`);
       const { data } = response;
       setMessageList(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  type FetchMessageInfo = ({ uid, messageId }: { uid: string; messageId: string }) => any;
+
+  const fetchMessageInfo: FetchMessageInfo = async ({ uid, messageId }) => {
+    try {
+      const response = await axios.get(`/api/messages.info?uid=${uid}&messageId=${messageId}`);
+      const { data } = response;
+
+      setMessageList((prev) => {
+        const findIndex = prev.findIndex((item) => item.id === data.id);
+
+        if (findIndex >= 0) {
+          const updateArr = [...prev];
+          updateArr[findIndex] = data;
+          return updateArr;
+        }
+
+        return prev;
+      });
     } catch (e) {
       console.error(e);
     }
@@ -108,12 +127,18 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
       return;
     }
 
-    getMessageList(userInfo.uid);
+    fetchMessageList(userInfo.uid);
   }, [userInfo, messageListFetchTrigger]);
 
   if (!userInfo) {
     return <p>사용자를 찾을 수 없습니다!</p>;
   }
+
+  const handleOnSendComplete = (messageId: string) => {
+    const { uid } = userInfo;
+
+    fetchMessageInfo({ uid, messageId });
+  };
 
   const handleSubmit = async () => {
     const { uid } = userInfo;
@@ -136,6 +161,7 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
     }
 
     setMessage('');
+    setMessageListFetchTrigger((prev) => !prev);
   };
 
   return (
@@ -207,7 +233,7 @@ const UserHomePage: NextPage<Props> = function ({ userInfo }) {
               displayName={userInfo.displayName ?? ''}
               photoURL={userInfo.photoURL ?? 'https://bit.ly/broken-link'}
               isOwner={authUser !== null && authUser.uid === userInfo.uid}
-              onSendComplete={handleOnSendComplete}
+              onSendComplete={() => handleOnSendComplete(messageData.id)}
             />
           ))}
         </VStack>
